@@ -5,7 +5,7 @@ pygame.init()
 windowWid = 650
 windowLen = 450
 window = pygame.display.set_mode((windowWid,windowLen))
-pygame.display.set_caption("WIP troll walkaround")
+pygame.display.set_caption("WIP walkaround")
 
 clock = pygame.time.Clock()
 
