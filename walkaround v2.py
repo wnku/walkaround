@@ -1,0 +1,180 @@
+#
+
+import pygame
+pygame.init()
+
+#
+
+
+collision_map = pygame.image.load('Maps/collision.png')
+mapCollisionMask = pygame.mask.from_surface(collision_map)
+
+#
+
+game_mapWid = collision_map.get_rect().size[0] # Get the size of the base image.
+game_mapLen = collision_map.get_rect().size[1]
+scopeWid = 450
+scopeLen = 450
+
+position_on_map = (scopeWid / 2, scopeLen / 2) # Set the initial position_on_map of the player to center of screen
+
+game_window = pygame.display.set_mode((scopeWid,scopeLen),) # Create game window using size of Scope (camera)
+pygame.display.set_caption("WIP walkaround")
+
+#
+background_image = pygame.image.load('Maps/background_layer.png').convert_alpha()
+foreground_image = pygame.image.load('Maps/foreground_layer.png').convert_alpha()
+
+#
+
+walkLeft = [pygame.image.load('Sprites/walking_left1.png').convert_alpha(),pygame.image.load('Sprites/walking_left2.png').convert_alpha()]
+walkRight = [pygame.image.load('Sprites/walking_right1.png').convert_alpha(),pygame.image.load('Sprites/walking_right2.png').convert_alpha()]
+walkUp = [pygame.image.load('Sprites/walking_up1.png').convert_alpha(),pygame.image.load('Sprites/walking_up2.png').convert_alpha()]
+walkDown = [pygame.image.load('Sprites/walking_down1.png').convert_alpha(),pygame.image.load('Sprites/walking_down2.png').convert_alpha()]
+standLeft = pygame.image.load('Sprites/standing_left.png').convert_alpha()
+standRight = pygame.image.load('Sprites/standing_right.png').convert_alpha()
+standUp = pygame.image.load('Sprites/standing_up.png').convert_alpha()
+standDown = pygame.image.load('Sprites/standing_down.png').convert_alpha()
+currentPlayerImage = standDown
+
+#
+
+clock = pygame.time.Clock()
+
+#
+
+def main():
+	global player, lkp
+	run = True	# Enable while loop
+	lkp = 4 	# Last key press state - default (down)
+
+	# Create objects on screen
+	
+	player = playerObject(150,150,standDown.get_rect().size[0],standDown.get_rect().size[1])
+
+	while run:
+		# Set FPS
+		clock.tick(20)
+
+		# Check for quit
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				run = False
+
+		player.checkMovement() 	#Check for movement
+		redrawGameWindow()		# Redraw window for next frame
+
+	pygame.quit()
+
+def redrawGameWindow():
+    # Window redraw BG
+
+    scopeRect = (player.x - scopeWid/2, player.y - scopeLen/2, scopeWid, scopeLen) # Map scope
+
+    game_window.fill((9,18,23))
+    game_window.blit(background_image, (0,0), scopeRect)
+
+    # Window redraw player
+    player.draw(game_window)
+
+    # Update
+    pygame.display.update()
+
+#
+
+class gameObject(object):
+	def __init__(self,x,y,width,height):
+		self.x = x
+		self.y = y
+		self.width = width
+		self.height = height
+
+class playerObject(object):
+    # Init, setup whatever
+    def __init__(self, x, y, width, height):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.vel = 8
+        self.left = self.right = self.up = self.down = False
+        self.walkCount = 0
+        self.hitbox = pygame.rect(self.x, self.y, 25,55)               #Allows hitbox for collision use later
+
+    def checkMovement(self):								# Allows for control of the user character, changing directional variables for left right up down
+        global lkp
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT] and self.x > self.vel:		#Extra complication used to prevent character from escaping map grounds - Left wall
+            self.x -= self.vel
+            self.left = True
+            self.right = False
+            self.up = False
+            self.down = False
+            lkp = 1
+        elif keys[pygame.K_RIGHT] and self.x < game_mapWid - self.width - self.vel:	# Right wall escape prevention
+            self.x += self.vel
+            self.left = False
+            self.right = True
+            self.up = False
+            self.down = False
+            lkp = 2
+
+        if keys[pygame.K_UP] and self.y > self.vel: # Top wall escape prevention
+            self.y -= self.vel
+            self.left = False
+            self.right = False
+            self.up = True
+            self.down = False
+            lkp = 3
+        elif keys[pygame.K_DOWN] and self.y < game_mapLen - self.height - self.vel:	#Lower boundary escape prev.
+            self.y += self.vel
+            self.left = False
+            self.right = False
+            self.up = False
+            self.down = True
+            lkp = 4
+
+        if not any((keys[pygame.K_UP], keys[pygame.K_DOWN], keys[pygame.K_LEFT], keys[pygame.K_RIGHT])): #If there's nothing, do nothing. Do not update lkp (Last key press) - we need to remember that
+            self.left = False	
+            self.right = False
+            self.up = False
+            self.down = False
+    def draw(self, window):
+        
+        if self.walkCount + 1 >= 3:	# If walk count exceeds the amount of frames loaded in walkLeft/Right etc, reset to 0. 
+            self.walkCount = 0
+
+        if self.right:										# Save current image for mask and blit
+            currentPlayerImage = walkRight[self.walkCount]
+            window.blit(currentPlayerImage,(position_on_map))
+            self.walkCount += 1
+        elif self.left:
+            currentPlayerImage = walkLeft[self.walkCount]
+            window.blit(currentPlayerImage, (position_on_map))
+            self.walkCount += 1
+        elif self.up:
+            currentPlayerImage = walkUp[self.walkCount]
+            window.blit(currentPlayerImage, (position_on_map))
+            self.walkCount += 1
+        elif self.down:
+            currentPlayerImage = walkDown[self.walkCount]
+            window.blit(currentPlayerImage, (position_on_map))
+            self.walkCount += 1
+        else:
+            if lkp == 1:							# Remember last direction
+                currentPlayerImage = standLeft
+                window.blit(standLeft, (position_on_map)) 
+            elif lkp == 2:
+                currentPlayerImage = standRight
+                window.blit(standRight, (position_on_map))
+            elif lkp == 3:
+                currentPlayerImage = standUp
+                window.blit(standUp, (position_on_map)) 
+            elif lkp == 4:
+                currentPlayerImage = standDown
+                window.blit(standDown, (position_on_map)) 
+        # pygame.draw.rect(window, (255,0,0), self.hitbox,2)  # Red hitbox rect - uncomment for debug
+
+
+if __name__ == "__main__":
+    main()
